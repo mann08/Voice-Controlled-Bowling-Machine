@@ -1,11 +1,1450 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>🎳 Voice-Controlled Bowling Machine — 3D View</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #070b10;
+        --panel: #0d1520;
+        --card: #111c2b;
+        --border: #1e2d42;
+        --blue: #3b82f6;
+        --cyan: #06b6d4;
+        --green: #22c55e;
+        --red: #ef4444;
+        --amber: #f59e0b;
+        --purple: #a855f7;
+        --text: #e2e8f0;
+        --muted: #64748b;
+        --glow: rgba(59, 130, 246, 0.35);
+      }
+
+      body {
+        background: var(--bg);
+        font-family: "Outfit", sans-serif;
+        color: var(--text);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      /* ── Header ── */
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 24px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
+        z-index: 10;
+        flex-shrink: 0;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo-icon {
+        font-size: 28px;
+        filter: drop-shadow(0 0 12px var(--cyan));
+      }
+      .logo-text {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+      }
+      .logo-text span {
+        color: var(--cyan);
+      }
+      .badge {
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: rgba(6, 182, 212, 0.12);
+        color: var(--cyan);
+        border: 1px solid rgba(6, 182, 212, 0.3);
+        padding: 3px 9px;
+        border-radius: 999px;
+        letter-spacing: 1px;
+      }
+      .status-pill {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+      }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 8px var(--green);
+        animation: pulse-dot 1.8s ease-in-out infinite;
+      }
+      .dot.stopped {
+        background: var(--red);
+        box-shadow: 0 0 8px var(--red);
+      }
+      @keyframes pulse-dot {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      /* ── Main layout ── */
+      .main {
+        display: flex;
+        flex: 1;
+        overflow: hidden;
+      }
+
+      /* ── 3D Canvas ── */
+      #canvas-wrap {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+      }
+      #three-canvas {
+        display: block;
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* Canvas overlays */
+      .canvas-label {
+        position: absolute;
+        bottom: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 11px;
+        color: var(--muted);
+        pointer-events: none;
+        letter-spacing: 0.5px;
+      }
+      .speed-display {
+        position: absolute;
+        top: 16px;
+        left: 20px;
+        background: rgba(13, 21, 32, 0.82);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px 16px;
+        font-size: 12px;
+        color: var(--muted);
+        backdrop-filter: blur(6px);
+      }
+      .speed-display b {
+        color: var(--cyan);
+        font-size: 15px;
+      }
+
+      /* ── Control sidebar ── */
+      .sidebar {
+        width: 280px;
+        background: var(--panel);
+        border-left: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        padding: 16px 14px;
+        gap: 14px;
+        flex-shrink: 0;
+      }
+
+      .section-title {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      /* Status cards */
+      .status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .stat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+      .stat-label {
+        font-size: 10px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .stat-value {
+        font-size: 17px;
+        font-weight: 700;
+        margin-top: 3px;
+      }
+      .stat-value.running {
+        color: var(--green);
+      }
+      .stat-value.stopped {
+        color: var(--red);
+      }
+      .stat-value.slow {
+        color: var(--text);
+      }
+      .stat-value.medium {
+        color: var(--amber);
+      }
+      .stat-value.fast {
+        color: var(--red);
+      }
+      .stat-value.on {
+        color: var(--green);
+      }
+      .stat-value.off {
+        color: var(--muted);
+      }
+      .stat-value.left {
+        color: var(--purple);
+      }
+      .stat-value.right {
+        color: var(--amber);
+      }
+      .stat-value.straight {
+        color: var(--blue);
+      }
+
+      /* Buttons */
+      .btn {
+        width: 100%;
+        padding: 10px 0;
+        border-radius: 9px;
+        font-family: "Outfit", sans-serif;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        border: none;
+        letter-spacing: 0.5px;
+        transition: all 0.18s ease;
+      }
+      .btn:active {
+        transform: scale(0.97);
+      }
+
+      .btn-start {
+        background: linear-gradient(135deg, #16a34a, #22c55e);
+        color: #fff;
+      }
+      .btn-start:hover {
+        box-shadow: 0 0 18px rgba(34, 197, 94, 0.45);
+      }
+
+      .btn-stop {
+        background: linear-gradient(135deg, #b91c1c, #ef4444);
+        color: #fff;
+      }
+      .btn-stop:hover {
+        box-shadow: 0 0 18px rgba(239, 68, 68, 0.45);
+      }
+
+      .btn-bowl {
+        background: linear-gradient(135deg, #7c3aed, #a855f7);
+        color: #fff;
+      }
+      .btn-bowl:hover {
+        box-shadow: 0 0 18px rgba(168, 85, 247, 0.45);
+      }
+
+      .btn-reset {
+        background: var(--card);
+        color: var(--muted);
+        border: 1px solid var(--border);
+      }
+      .btn-reset:hover {
+        color: var(--text);
+        border-color: var(--muted);
+      }
+
+      .btn-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      /* Speed slider */
+      .slider-wrap {
+        padding: 4px 0;
+      }
+      .slider-label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+      }
+      .slider-label b {
+        color: var(--cyan);
+      }
+      input[type="range"] {
+        width: 100%;
+        margin-top: 8px;
+        -webkit-appearance: none;
+        height: 5px;
+        border-radius: 4px;
+        background: linear-gradient(
+          to right,
+          var(--cyan) 0%,
+          var(--cyan) 50%,
+          var(--border) 50%
+        );
+        outline: none;
+        cursor: pointer;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--cyan);
+        box-shadow: 0 0 8px rgba(6, 182, 212, 0.6);
+      }
+
+      /* Direction buttons */
+      .dir-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 7px;
+      }
+      .btn-dir {
+        padding: 9px 0;
+        border-radius: 9px;
+        font-family: "Outfit", sans-serif;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--muted);
+        transition: all 0.18s ease;
+        letter-spacing: 0.3px;
+      }
+      .btn-dir.active {
+        background: rgba(59, 130, 246, 0.18);
+        border-color: var(--blue);
+        color: var(--blue);
+        box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+      }
+
+      /* Spin toggle */
+      .toggle-wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 11px 14px;
+      }
+      .toggle-label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .toggle-switch {
+        position: relative;
+        width: 46px;
+        height: 24px;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .toggle-track {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--border);
+        border-radius: 24px;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .toggle-track::before {
+        content: "";
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: var(--muted);
+        top: 3px;
+        left: 3px;
+        transition:
+          transform 0.2s,
+          background 0.2s;
+      }
+      .toggle-switch input:checked + .toggle-track {
+        background: rgba(34, 197, 94, 0.3);
+      }
+      .toggle-switch input:checked + .toggle-track::before {
+        transform: translateX(22px);
+        background: var(--green);
+        box-shadow: 0 0 8px var(--green);
+      }
+
+      /* Ball counter */
+      .ball-meter {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .ball-count {
+        font-size: 32px;
+        font-weight: 900;
+        color: var(--cyan);
+      }
+      .ball-balls {
+        display: flex;
+        gap: 5px;
+        margin-top: 8px;
+        flex-wrap: wrap;
+      }
+      .ball-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--border);
+        transition:
+          background 0.3s,
+          box-shadow 0.3s;
+      }
+      .ball-dot.fired {
+        background: var(--cyan);
+        box-shadow: 0 0 6px rgba(6, 182, 212, 0.6);
+      }
+
+      hr.divider {
+        border: none;
+        border-top: 1px solid var(--border);
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── Header ── -->
+    <header>
+      <div class="logo">
+        <div class="logo-icon">🎳</div>
+        <div class="logo-text">
+          Voice-Controlled <span>Bowling Machine</span>
+        </div>
+        <div class="badge">3D SIM</div>
+      </div>
+      <div class="status-pill">
+        <div class="dot stopped" id="header-dot"></div>
+        <span id="header-status">STOPPED</span>
+      </div>
+    </header>
+
+    <!-- ── Main ── -->
+    <div class="main">
+      <!-- 3D Canvas -->
+      <div id="canvas-wrap">
+        <canvas id="three-canvas"></canvas>
+        <div class="speed-display">Speed: <b id="speed-label">SLOW</b></div>
+        <div class="canvas-label">
+          Click + Drag to orbit &nbsp;|&nbsp; Scroll to zoom
+        </div>
+      </div>
+
+      <!-- Control sidebar -->
+      <aside class="sidebar">
+        <!-- Status -->
+        <div>
+          <div class="section-title">Machine Status</div>
+          <div class="status-grid">
+            <div class="stat-card">
+              <div class="stat-label">State</div>
+              <div class="stat-value stopped" id="st-state">STOPPED</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Speed</div>
+              <div class="stat-value slow" id="st-speed">SLOW</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Direction</div>
+              <div class="stat-value straight" id="st-dir">STRAIGHT</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Spin</div>
+              <div class="stat-value off" id="st-spin">OFF</div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Primary controls -->
+        <div>
+          <div class="section-title">Controls</div>
+          <div class="btn-grid" style="margin-bottom: 8px">
+            <button class="btn btn-start" onclick="doStart()">▶ START</button>
+            <button class="btn btn-stop" onclick="doStop()">■ STOP</button>
+          </div>
+          <div class="btn-grid">
+            <button class="btn btn-bowl" onclick="doBowl()">🎳 BOWL</button>
+            <button class="btn btn-reset" onclick="doReset()">↺ RESET</button>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Speed -->
+        <div>
+          <div class="section-title">Speed Control</div>
+          <div class="slider-wrap">
+            <div class="slider-label">
+              <span>SLOW → MEDIUM → FAST</span>
+              <b id="speed-slider-label">SLOW</b>
+            </div>
+            <input
+              type="range"
+              id="speed-slider"
+              min="0"
+              max="2"
+              step="1"
+              value="0"
+              oninput="onSpeedSlider(this.value)"
+            />
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Direction -->
+        <div>
+          <div class="section-title">Direction</div>
+          <div class="dir-grid">
+            <button class="btn-dir" id="dir-left" onclick="setDir('LEFT')">
+              ◀ LEFT
+            </button>
+            <button
+              class="btn-dir active"
+              id="dir-straight"
+              onclick="setDir('STRAIGHT')"
+            >
+              ● CENTRE
+            </button>
+            <button class="btn-dir" id="dir-right" onclick="setDir('RIGHT')">
+              RIGHT ▶
+            </button>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Spin -->
+        <div>
+          <div class="section-title">Spin</div>
+          <div class="toggle-wrap">
+            <span class="toggle-label">🔄 Ball Spin</span>
+            <label class="toggle-switch">
+              <input
+                type="checkbox"
+                id="spin-toggle"
+                onchange="onSpinToggle(this.checked)"
+              />
+              <div class="toggle-track"></div>
+            </label>
+          </div>
+        </div>
+
+        <hr class="divider" />
+
+        <!-- Ball counter -->
+        <div>
+          <div class="section-title">Balls Bowled</div>
+          <div class="ball-meter">
+            <div class="ball-count" id="ball-count">0</div>
+            <div style="font-size: 11px; color: var(--muted); margin-top: 2px">
+              total deliveries
+            </div>
+            <div class="ball-balls" id="ball-dots"></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ── Three.js (r158 CDN) ── -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls inline (r128 compatible) -->
+    <script>
+      // ─────────────────────────────────────────────────────────
+      // Minimal OrbitControls adapted for r128
+      // ─────────────────────────────────────────────────────────
+      THREE.OrbitControls = function (camera, domElement) {
+        this.camera = camera;
+        this.domElement = domElement;
+        this.target = new THREE.Vector3();
+        this.enableDamping = true;
+        this.dampingFactor = 0.07;
+
+        let _spherical = new THREE.Spherical();
+        let _sphericalDelta = new THREE.Spherical();
+        let _scale = 1;
+        let _isDragging = false;
+        let _lastPos = { x: 0, y: 0 };
+
+        const ROTATE_SPEED = 0.005;
+        const ZOOM_SPEED = 0.1;
+
+        // Set initial spherical from camera
+        const offset = new THREE.Vector3();
+        offset.copy(camera.position).sub(this.target);
+        _spherical.setFromVector3(offset);
+
+        domElement.addEventListener("mousedown", (e) => {
+          _isDragging = true;
+          _lastPos = { x: e.clientX, y: e.clientY };
+        });
+        window.addEventListener("mouseup", () => {
+          _isDragging = false;
+        });
+        window.addEventListener("mousemove", (e) => {
+          if (!_isDragging) return;
+          _sphericalDelta.theta -= (e.clientX - _lastPos.x) * ROTATE_SPEED;
+          _sphericalDelta.phi -= (e.clientY - _lastPos.y) * ROTATE_SPEED;
+          _lastPos = { x: e.clientX, y: e.clientY };
+        });
+        domElement.addEventListener("wheel", (e) => {
+          _scale *= e.deltaY > 0 ? 1 + ZOOM_SPEED : 1 - ZOOM_SPEED;
+          _scale = Math.max(0.3, Math.min(4, _scale));
+        });
+        // Touch
+        let _lastTouch = null;
+        domElement.addEventListener("touchstart", (e) => {
+          if (e.touches.length === 1) {
+            _isDragging = true;
+            _lastPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          }
+        });
+        domElement.addEventListener("touchend", () => {
+          _isDragging = false;
+          _lastTouch = null;
+        });
+        domElement.addEventListener("touchmove", (e) => {
+          if (!_isDragging || e.touches.length !== 1) return;
+          _sphericalDelta.theta -=
+            (e.touches[0].clientX - _lastPos.x) * ROTATE_SPEED;
+          _sphericalDelta.phi -=
+            (e.touches[0].clientY - _lastPos.y) * ROTATE_SPEED;
+          _lastPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        });
+
+        this.update = function () {
+          _spherical.theta += _sphericalDelta.theta;
+          _spherical.phi += _sphericalDelta.phi;
+          _spherical.phi = Math.max(
+            0.1,
+            Math.min(Math.PI - 0.1, _spherical.phi),
+          );
+          _spherical.radius *= _scale;
+          _spherical.radius = Math.max(3, Math.min(22, _spherical.radius));
+
+          if (this.enableDamping) {
+            _sphericalDelta.theta *= 1 - this.dampingFactor;
+            _sphericalDelta.phi *= 1 - this.dampingFactor;
+          } else {
+            _sphericalDelta.set(0, 0, 0);
+          }
+          _scale = 1;
+
+          const newOffset = new THREE.Vector3().setFromSpherical(_spherical);
+          camera.position.copy(this.target).add(newOffset);
+          camera.lookAt(this.target);
+        };
+      };
+    </script>
+
+    <script>
+      // ═══════════════════════════════════════════════════════════════
+      //  MACHINE STATE
+      // ═══════════════════════════════════════════════════════════════
+      const machine = {
+        running: false,
+        speed: "SLOW", // SLOW / MEDIUM / FAST
+        direction: "STRAIGHT",
+        spin: false,
+        ballCount: 0,
+      };
+
+      // RPM per speed level
+      const SPEED_RPM = { SLOW: 60, MEDIUM: 150, FAST: 280 };
+
+      // ═══════════════════════════════════════════════════════════════
+      //  THREE.JS SETUP
+      // ═══════════════════════════════════════════════════════════════
+      const canvas = document.getElementById("three-canvas");
+      const wrap = document.getElementById("canvas-wrap");
+
+      const renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: false,
+      });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x070b10);
+      scene.fog = new THREE.Fog(0x070b10, 18, 35);
+
+      const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+      camera.position.set(6, 5, 9);
+      camera.lookAt(0, 1, 0);
+
+      const controls = new THREE.OrbitControls(camera, canvas);
+      controls.target.set(0, 1, 0);
+
+      // ── Resize handler ──
+      function onResize() {
+        const w = wrap.clientWidth;
+        const h = wrap.clientHeight;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+      const ro = new ResizeObserver(onResize);
+      ro.observe(wrap);
+      onResize();
+
+      // ═══════════════════════════════════════════════════════════════
+      //  LIGHTING
+      // ═══════════════════════════════════════════════════════════════
+      // Ambient
+      scene.add(new THREE.AmbientLight(0x1a2a3a, 3));
+
+      // Key light (blue-ish left)
+      const keyLight = new THREE.DirectionalLight(0x6ab0ff, 2.2);
+      keyLight.position.set(-4, 8, 5);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.set(2048, 2048);
+      keyLight.shadow.camera.near = 0.5;
+      keyLight.shadow.camera.far = 30;
+      keyLight.shadow.camera.left = keyLight.shadow.camera.bottom = -8;
+      keyLight.shadow.camera.right = keyLight.shadow.camera.top = 8;
+      scene.add(keyLight);
+
+      // Fill light (warm right)
+      const fillLight = new THREE.DirectionalLight(0xffa040, 0.8);
+      fillLight.position.set(5, 4, 2);
+      scene.add(fillLight);
+
+      // Rim light (back)
+      const rimLight = new THREE.DirectionalLight(0x40bfff, 1.4);
+      rimLight.position.set(0, 3, -6);
+      scene.add(rimLight);
+
+      // Point light under machine (glow)
+      const glowLight = new THREE.PointLight(0x06b6d4, 1.8, 6);
+      glowLight.position.set(0, 0.2, 0);
+      scene.add(glowLight);
+
+      // ═══════════════════════════════════════════════════════════════
+      //  MATERIALS
+      // ═══════════════════════════════════════════════════════════════
+      const matBody = new THREE.MeshStandardMaterial({
+        color: 0x1e3a5f,
+        metalness: 0.7,
+        roughness: 0.25,
+        envMapIntensity: 1.2,
+      });
+      const matAccent = new THREE.MeshStandardMaterial({
+        color: 0x06b6d4,
+        metalness: 0.8,
+        roughness: 0.1,
+        emissive: 0x06b6d4,
+        emissiveIntensity: 0.15,
+      });
+      const matWheel = new THREE.MeshStandardMaterial({
+        color: 0x0a1628,
+        metalness: 0.4,
+        roughness: 0.6,
+      });
+      const matTire = new THREE.MeshStandardMaterial({
+        color: 0x111111,
+        metalness: 0.0,
+        roughness: 0.9,
+      });
+      const matBall = new THREE.MeshStandardMaterial({
+        color: 0xcc2200,
+        metalness: 0.1,
+        roughness: 0.4,
+      });
+      const matTrough = new THREE.MeshStandardMaterial({
+        color: 0x152035,
+        metalness: 0.5,
+        roughness: 0.5,
+      });
+      const matGround = new THREE.MeshStandardMaterial({
+        color: 0x0d1520,
+        metalness: 0.0,
+        roughness: 0.9,
+      });
+      const matLane = new THREE.MeshStandardMaterial({
+        color: 0x14243a,
+        metalness: 0.1,
+        roughness: 0.7,
+      });
+      const matGlass = new THREE.MeshStandardMaterial({
+        color: 0x3b82f6,
+        metalness: 0.2,
+        roughness: 0.0,
+        transparent: true,
+        opacity: 0.25,
+      });
+
+      // ═══════════════════════════════════════════════════════════════
+      //  HELPERS
+      // ═══════════════════════════════════════════════════════════════
+      function box(w, h, d, mat, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+        m.position.set(x, y, z);
+        m.rotation.set(rx, ry, rz);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        scene.add(m);
+        return m;
+      }
+      function cyl(
+        rt,
+        rb,
+        h,
+        seg,
+        mat,
+        x = 0,
+        y = 0,
+        z = 0,
+        rx = 0,
+        ry = 0,
+        rz = 0,
+      ) {
+        const m = new THREE.Mesh(
+          new THREE.CylinderGeometry(rt, rb, h, seg),
+          mat,
+        );
+        m.position.set(x, y, z);
+        m.rotation.set(rx, ry, rz);
+        m.castShadow = true;
+        m.receiveShadow = true;
+        scene.add(m);
+        return m;
+      }
+      function sphere(r, mat, x = 0, y = 0, z = 0) {
+        const m = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 32), mat);
+        m.position.set(x, y, z);
+        m.castShadow = true;
+        scene.add(m);
+        return m;
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      //  GROUND + LANE
+      // ═══════════════════════════════════════════════════════════════
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), matGround);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      // Lane markings
+      const lane = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 20), matLane);
+      lane.rotation.x = -Math.PI / 2;
+      lane.position.set(0, 0.001, 4);
+      lane.receiveShadow = true;
+      scene.add(lane);
+
+      // Grid helper (faint)
+      const grid = new THREE.GridHelper(20, 20, 0x1e2d42, 0x111c2b);
+      grid.position.y = 0.002;
+      scene.add(grid);
+
+      // ═══════════════════════════════════════════════════════════════
+      //  BOWLING MACHINE MODEL
+      // ═══════════════════════════════════════════════════════════════
+      const machineGroup = new THREE.Group();
+      scene.add(machineGroup);
+
+      // — Chassis base —
+      const chassis = new THREE.Mesh(
+        new THREE.BoxGeometry(1.4, 0.3, 2.2),
+        matBody,
+      );
+      chassis.position.set(0, 0.35, 0);
+      chassis.castShadow = true;
+      chassis.receiveShadow = true;
+      machineGroup.add(chassis);
+
+      // — Chassis top panel —
+      const topPanel = new THREE.Mesh(
+        new THREE.BoxGeometry(1.3, 0.08, 2.0),
+        matAccent,
+      );
+      topPanel.position.set(0, 0.54, 0);
+      machineGroup.add(topPanel);
+
+      // — Vertical tower —
+      const tower = new THREE.Mesh(
+        new THREE.BoxGeometry(0.9, 1.6, 0.9),
+        matBody,
+      );
+      tower.position.set(0, 1.3, -0.4);
+      tower.castShadow = true;
+      tower.receiveShadow = true;
+      machineGroup.add(tower);
+
+      // — Tower front accent strip —
+      const towerStrip = new THREE.Mesh(
+        new THREE.BoxGeometry(0.85, 1.5, 0.05),
+        matAccent,
+      );
+      towerStrip.position.set(0, 1.3, 0.11);
+      machineGroup.add(towerStrip);
+
+      // — Wheel housing (left & right) —
+      function makeWheelAssembly(side) {
+        const x = side * 0.42;
+        // Housing
+        const housing = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.38, 0.38, 0.22, 32),
+          matBody,
+        );
+        housing.rotation.z = Math.PI / 2;
+        housing.position.set(x, 1.9, 0.12);
+        machineGroup.add(housing);
+        // Tire
+        const tire = new THREE.Mesh(
+          new THREE.TorusGeometry(0.35, 0.06, 16, 40),
+          matTire,
+        );
+        tire.rotation.y = Math.PI / 2;
+        tire.position.set(x, 1.9, 0.12);
+        machineGroup.add(tire);
+        // Wheel spokes
+        const spokeMat = new THREE.MeshStandardMaterial({
+          color: 0x203050,
+          metalness: 0.7,
+          roughness: 0.3,
+        });
+        for (let i = 0; i < 5; i++) {
+          const spoke = new THREE.Mesh(
+            new THREE.BoxGeometry(0.04, 0.58, 0.04),
+            spokeMat,
+          );
+          spoke.rotation.z = (i / 5) * Math.PI;
+          spoke.position.set(x, 1.9, 0.12);
+          machineGroup.add(spoke);
+        }
+        return housing;
+      }
+      const wheelL = makeWheelAssembly(-1);
+      const wheelR = makeWheelAssembly(1);
+
+      // — Ball trough (input hopper) —
+      const hopper = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 0.5, 0.5),
+        matTrough,
+      );
+      hopper.position.set(0, 1.3, -1.1);
+      machineGroup.add(hopper);
+      // Hopper opening
+      const hopperFront = new THREE.Mesh(
+        new THREE.BoxGeometry(0.6, 0.4, 0.08),
+        matGlass,
+      );
+      hopperFront.position.set(0, 1.3, -0.85);
+      machineGroup.add(hopperFront);
+
+      // — Barrel / launch tube —
+      const barrelGroup = new THREE.Group();
+      barrelGroup.position.set(0, 1.9, 0.12);
+      machineGroup.add(barrelGroup);
+
+      const barrel = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.12, 0.14, 0.9, 20),
+        matAccent,
+      );
+      barrel.rotation.x = Math.PI / 2;
+      barrel.position.set(0, 0, 0.55);
+      barrelGroup.add(barrel);
+
+      const barrelEnd = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.1, 0.12, 0.1, 20),
+        matBody,
+      );
+      barrelEnd.rotation.x = Math.PI / 2;
+      barrelEnd.position.set(0, 0, 1.05);
+      barrelGroup.add(barrelEnd);
+
+      // — Control panel on tower —
+      const panel = new THREE.Mesh(
+        new THREE.BoxGeometry(0.7, 0.45, 0.06),
+        matBody,
+      );
+      panel.position.set(0, 2.4, 0.16);
+      machineGroup.add(panel);
+      // LED indicators on panel
+      const ledColors = [0x22c55e, 0xf59e0b, 0xef4444, 0x06b6d4];
+      ledColors.forEach((c, i) => {
+        const led = new THREE.Mesh(
+          new THREE.SphereGeometry(0.03, 8, 8),
+          new THREE.MeshStandardMaterial({
+            color: c,
+            emissive: c,
+            emissiveIntensity: 0.8,
+          }),
+        );
+        led.position.set(-0.2 + i * 0.13, 2.5, 0.2);
+        machineGroup.add(led);
+      });
+
+      // — Wheels (base) —
+      const baseWheelMat = new THREE.MeshStandardMaterial({
+        color: 0x050d18,
+        metalness: 0.2,
+        roughness: 0.8,
+      });
+      const baseWheelAxle = new THREE.MeshStandardMaterial({
+        color: 0x203050,
+        metalness: 0.7,
+        roughness: 0.3,
+      });
+      [
+        [-0.55, -0.7],
+        [0.55, -0.7],
+        [-0.55, 0.7],
+        [0.55, 0.7],
+      ].forEach(([x, z]) => {
+        const w = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.12, 0.09, 16),
+          baseWheelMat,
+        );
+        w.rotation.x = Math.PI / 2;
+        w.position.set(x, 0.12, z);
+        machineGroup.add(w);
+        const axle = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.03, 0.03, 0.14, 8),
+          baseWheelAxle,
+        );
+        axle.rotation.x = Math.PI / 2;
+        axle.position.set(x, 0.12, z);
+        machineGroup.add(axle);
+      });
+
+      // — Glow rings under machine —
+      const ringGeo = new THREE.TorusGeometry(0.55, 0.025, 8, 64);
+      const ringMat = new THREE.MeshStandardMaterial({
+        color: 0x06b6d4,
+        emissive: 0x06b6d4,
+        emissiveIntensity: 0.6,
+      });
+      const baseRing = new THREE.Mesh(ringGeo, ringMat);
+      baseRing.rotation.x = Math.PI / 2;
+      baseRing.position.set(0, 0.05, 0);
+      machineGroup.add(baseRing);
+
+      // ═══════════════════════════════════════════════════════════════
+      //  ANIMATED BALL
+      // ═══════════════════════════════════════════════════════════════
+      const ballMesh = sphere(0.115, matBall, 0, 1.9, 0.12);
+      ballMesh.visible = false;
+      let ballAnim = null; // { progress: 0..1, startPos, endPos, spinning }
+
+      function fireBall() {
+        // Direction offset
+        const dirOffset = { LEFT: -0.6, STRAIGHT: 0, RIGHT: 0.6 };
+        const xEnd = dirOffset[machine.direction] || 0;
+        ballMesh.position.set(0, 1.9, 0.12);
+        ballMesh.visible = true;
+        ballAnim = {
+          progress: 0,
+          startZ: 1.1,
+          endZ: 14,
+          startX: 0,
+          endX: xEnd,
+          startY: 1.9,
+          endY: 0.115,
+          spinning: machine.spin,
+        };
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      //  AMBIENT PARTICLES (floating dots)
+      // ═══════════════════════════════════════════════════════════════
+      const particleCount = 120;
+      const pGeo = new THREE.BufferGeometry();
+      const pPositions = new Float32Array(particleCount * 3);
+      const pVelocities = [];
+      for (let i = 0; i < particleCount; i++) {
+        pPositions[i * 3] = (Math.random() - 0.5) * 14;
+        pPositions[i * 3 + 1] = Math.random() * 5;
+        pPositions[i * 3 + 2] = (Math.random() - 0.5) * 14;
+        pVelocities.push(
+          (Math.random() - 0.5) * 0.004,
+          Math.random() * 0.006,
+          (Math.random() - 0.5) * 0.004,
+        );
+      }
+      pGeo.setAttribute("position", new THREE.BufferAttribute(pPositions, 3));
+      const pMat = new THREE.PointsMaterial({
+        color: 0x06b6d4,
+        size: 0.04,
+        transparent: true,
+        opacity: 0.45,
+      });
+      const particles = new THREE.Points(pGeo, pMat);
+      scene.add(particles);
+
+      // ═══════════════════════════════════════════════════════════════
+      //  DIRECTION INDICATOR ARROW (lane arrow)
+      // ═══════════════════════════════════════════════════════════════
+      const arrowHelper = new THREE.ArrowHelper(
+        new THREE.Vector3(0, 0, 1),
+        new THREE.Vector3(0, 0.05, 1.5),
+        1.2,
+        0x06b6d4,
+        0.3,
+        0.18,
+      );
+      scene.add(arrowHelper);
+
+      function updateArrow() {
+        const dirs = {
+          LEFT: new THREE.Vector3(-0.3, 0, 0.95),
+          STRAIGHT: new THREE.Vector3(0, 0, 1),
+          RIGHT: new THREE.Vector3(0.3, 0, 0.95),
+        };
+        const d = dirs[machine.direction] || dirs.STRAIGHT;
+        d.normalize();
+        arrowHelper.setDirection(d);
+        const colours = { LEFT: 0xa855f7, STRAIGHT: 0x06b6d4, RIGHT: 0xf59e0b };
+        arrowHelper.setColor(colours[machine.direction] || 0x06b6d4);
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      //  WHEEL SPIN OBJECTS (refs)
+      // ═══════════════════════════════════════════════════════════════
+      // We'll spin the machineGroup's wheel children by index
+      const wheelObjects = machineGroup.children.filter(
+        (c) =>
+          c.geometry &&
+          c.geometry.type === "CylinderGeometry" &&
+          Math.abs(c.position.y - 1.9) < 0.1,
+      );
+
+      // ═══════════════════════════════════════════════════════════════
+      //  ANIMATION LOOP
+      // ═══════════════════════════════════════════════════════════════
+      let clock = new THREE.Clock();
+      let t = 0;
+
+      function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        t += delta;
+
+        const rpm = machine.running ? SPEED_RPM[machine.speed] : 0;
+        const rps = (rpm / 60) * Math.PI * 2; // rad/s
+
+        // ── Spin launch wheels ──
+        machineGroup.children.forEach((child) => {
+          if (
+            child.geometry &&
+            child.geometry.type === "TorusGeometry" &&
+            Math.abs(child.position.y - 1.9) < 0.1
+          ) {
+            // Tires spin
+            const spinDir = child.position.x > 0 ? 1 : -1;
+            child.rotation.x += rps * delta * spinDir;
+          }
+          if (
+            child.geometry &&
+            child.geometry.type === "CylinderGeometry" &&
+            Math.abs(child.position.y - 1.9) < 0.1
+          ) {
+            // Wheel spokes spin
+            const dir = child.position.x > 0 ? 1 : -1;
+            child.rotation.x += rps * delta * dir;
+          }
+        });
+
+        // Also spin spoke boxes (type BoxGeometry at y≈1.9)
+        machineGroup.children.forEach((child) => {
+          if (
+            child.geometry &&
+            child.geometry.type === "BoxGeometry" &&
+            Math.abs(child.position.y - 1.9) < 0.05 &&
+            Math.abs(child.geometry.parameters.width - 0.04) < 0.01
+          ) {
+            const dir = child.position.x > 0 ? 1 : -1;
+            child.rotation.x += rps * delta * dir;
+          }
+        });
+
+        // ── Machine bob when running ──
+        if (machine.running) {
+          machineGroup.position.y = Math.sin(t * 12) * 0.003;
+        } else {
+          machineGroup.position.y = 0;
+        }
+
+        // ── Glow pulse ──
+        const glowI = machine.running ? 0.8 + Math.sin(t * 4) * 0.4 : 0.3;
+        ringMat.emissiveIntensity = glowI;
+        glowLight.intensity = machine.running
+          ? 1.8 + Math.sin(t * 3) * 0.6
+          : 0.4;
+
+        // ── Ball animation ──
+        if (ballAnim) {
+          const speedFactor =
+            { SLOW: 0.4, MEDIUM: 0.7, FAST: 1.2 }[machine.speed] || 0.5;
+          ballAnim.progress += delta * speedFactor;
+          const p = Math.min(ballAnim.progress, 1);
+          const eased = 1 - Math.pow(1 - p, 2); // ease-out quad
+          ballMesh.position.x =
+            ballAnim.startX + (ballAnim.endX - ballAnim.startX) * eased;
+          ballMesh.position.z =
+            ballAnim.startZ + (ballAnim.endZ - ballAnim.startZ) * eased;
+          ballMesh.position.y =
+            ballAnim.startY -
+            (ballAnim.startY - ballAnim.endY) * eased +
+            Math.sin(p * Math.PI) * 0.18; // gentle arc
+          if (ballAnim.spinning) {
+            ballMesh.rotation.x += delta * 12;
+            ballMesh.rotation.y += delta * 8;
+          }
+          if (p >= 1) {
+            ballMesh.visible = false;
+            ballAnim = null;
+          }
+        }
+
+        // ── Particles ──
+        const pos = pGeo.attributes.position.array;
+        for (let i = 0; i < particleCount; i++) {
+          pos[i * 3] += pVelocities[i * 3];
+          pos[i * 3 + 1] += pVelocities[i * 3 + 1];
+          pos[i * 3 + 2] += pVelocities[i * 3 + 2];
+          if (pos[i * 3 + 1] > 5) pos[i * 3 + 1] = 0;
+          if (Math.abs(pos[i * 3]) > 7) pVelocities[i * 3] *= -1;
+          if (Math.abs(pos[i * 3 + 2]) > 7) pVelocities[i * 3 + 2] *= -1;
+        }
+        pGeo.attributes.position.needsUpdate = true;
+        particles.visible = machine.running;
+
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // ═══════════════════════════════════════════════════════════════
+      //  UI SYNC
+      // ═══════════════════════════════════════════════════════════════
+      function syncUI() {
+        // Header
+        const dot = document.getElementById("header-dot");
+        const hst = document.getElementById("header-status");
+        dot.className = "dot " + (machine.running ? "" : "stopped");
+        hst.textContent = machine.running ? "RUNNING" : "STOPPED";
+
+        // Speed overlay
+        document.getElementById("speed-label").textContent = machine.speed;
+
+        // Stat cards
+        const stState = document.getElementById("st-state");
+        stState.textContent = machine.running ? "RUNNING" : "STOPPED";
+        stState.className =
+          "stat-value " + (machine.running ? "running" : "stopped");
+
+        const stSpeed = document.getElementById("st-speed");
+        stSpeed.textContent = machine.speed;
+        stSpeed.className = "stat-value " + machine.speed.toLowerCase();
+
+        const stDir = document.getElementById("st-dir");
+        stDir.textContent = machine.direction;
+        stDir.className = "stat-value " + machine.direction.toLowerCase();
+
+        const stSpin = document.getElementById("st-spin");
+        stSpin.textContent = machine.spin ? "ON" : "OFF";
+        stSpin.className = "stat-value " + (machine.spin ? "on" : "off");
+
+        // Ball counter
+        document.getElementById("ball-count").textContent = machine.ballCount;
+        const dotsWrap = document.getElementById("ball-dots");
+        const MAX_DOTS = 20;
+        dotsWrap.innerHTML = "";
+        for (let i = 0; i < Math.min(machine.ballCount, MAX_DOTS); i++) {
+          const d = document.createElement("div");
+          d.className = "ball-dot fired";
+          dotsWrap.appendChild(d);
+        }
+
+        // Direction buttons
+        ["left", "straight", "right"].forEach((d) => {
+          document
+            .getElementById("dir-" + d)
+            .classList.toggle(
+              "active",
+              machine.direction.toUpperCase() === d.toUpperCase() ||
+                (d === "straight" && machine.direction === "STRAIGHT"),
+            );
+        });
+        document
+          .getElementById("dir-left")
+          .classList.toggle("active", machine.direction === "LEFT");
+        document
+          .getElementById("dir-straight")
+          .classList.toggle("active", machine.direction === "STRAIGHT");
+        document
+          .getElementById("dir-right")
+          .classList.toggle("active", machine.direction === "RIGHT");
+
+        // Speed slider
+        const sIdx = ["SLOW", "MEDIUM", "FAST"].indexOf(machine.speed);
+        document.getElementById("speed-slider").value = sIdx;
+        document.getElementById("speed-slider-label").textContent =
+          machine.speed;
+        const pct = (sIdx / 2) * 100;
+        document.getElementById("speed-slider").style.background =
+          `linear-gradient(to right, var(--cyan) 0%, var(--cyan) ${pct}%, var(--border) ${pct}%)`;
+
+        // Spin toggle
+        document.getElementById("spin-toggle").checked = machine.spin;
+
+        // Arrow
+        updateArrow();
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      //  CONTROLS
+      // ═══════════════════════════════════════════════════════════════
+      function doStart() {
+        if (machine.running) return;
+        machine.running = true;
+        syncUI();
+        flashLog("▶ Machine STARTED", "green");
+      }
+      function doStop() {
+        if (!machine.running) return;
+        machine.running = false;
+        syncUI();
+        flashLog("■ Machine STOPPED", "red");
+      }
+      function doBowl() {
+        if (!machine.running) {
+          flashLog("⚠ Start the machine first!", "amber");
+          return;
+        }
+        machine.ballCount++;
+        fireBall();
+        syncUI();
+        const spin = machine.spin ? "with spin" : "no spin";
+        flashLog(
+          `🎳 Ball #${machine.ballCount} → ${machine.direction} | ${machine.speed} | ${spin}`,
+          "cyan",
+        );
+      }
+      function doReset() {
+        machine.running = false;
+        machine.speed = "SLOW";
+        machine.direction = "STRAIGHT";
+        machine.spin = false;
+        machine.ballCount = 0;
+        ballMesh.visible = false;
+        ballAnim = null;
+        syncUI();
+        flashLog("↺ Machine RESET to defaults", "muted");
+      }
+      function setDir(d) {
+        machine.direction = d;
+        syncUI();
+        flashLog(`◈ Direction → ${d}`, "blue");
+      }
+      function onSpeedSlider(val) {
+        machine.speed = ["SLOW", "MEDIUM", "FAST"][parseInt(val)];
+        syncUI();
+        flashLog(`⚡ Speed → ${machine.speed}`, "cyan");
+      }
+      function onSpinToggle(checked) {
+        machine.spin = checked;
+        syncUI();
+        flashLog(
+          `🔄 Spin ${checked ? "ENABLED" : "DISABLED"}`,
+          checked ? "green" : "muted",
+        );
+      }
+
+      // ── Flash log (canvas overlay toast) ──
+      let toastTimer = null;
+      function flashLog(msg, colour) {
+        let toast = document.getElementById("toast");
+        if (!toast) {
+          toast = document.createElement("div");
+          toast.id = "toast";
+          toast.style.cssText = `
+      position:absolute; top:16px; right:20px;
+      background:rgba(13,21,32,0.92); border:1px solid var(--border);
+      border-radius:10px; padding:10px 18px;
+      font-size:13px; font-weight:600;
+      backdrop-filter:blur(8px);
+      transition:opacity 0.3s; pointer-events:none;
+      max-width:300px; line-height:1.5; z-index:20;
+    `;
+          wrap.appendChild(toast);
+        }
+        const cols = {
+          green: "#22c55e",
+          red: "#ef4444",
+          amber: "#f59e0b",
+          cyan: "#06b6d4",
+          blue: "#3b82f6",
+          muted: "#94a3b8",
+        };
+        toast.style.color = cols[colour] || "#e2e8f0";
+        toast.style.borderColor = (cols[colour] || "#1e2d42") + "66";
+        toast.style.opacity = "1";
+        toast.textContent = msg;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          toast.style.opacity = "0";
+        }, 2800);
+      }
+
+      // Init
+      syncUI();
+    </script>
+  </body>
 </html>
