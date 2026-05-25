@@ -1,0 +1,11 @@
+# Requirements for Voice-Controlled Cricket Bowling Machine (Pygame)
+# Install with:
+#   pip install -r requirements.txt
+#
+# Then run:
+#   python main.py
+
+pygame==2.5.2               # Game simulation window, rendering, events
+SpeechRecognition==3.10.4   # Speech-to-text via Google Web Speech API
+pyttsx3==2.90               # Offline text-to-speech feedback
+pyaudio==0.2.14             # Microphone access (required by SpeechRecognition)
