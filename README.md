@@ -48,7 +48,6 @@ minor project/
 ├── requirements.txt     → Python package dependencies
 └── README.md            → This file
 ```
-
 ---
 
 ## 🧠 Architecture
