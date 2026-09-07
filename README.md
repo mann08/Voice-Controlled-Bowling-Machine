@@ -15,7 +15,7 @@
 
 ---
 
-## 🎮 Demo Features
+# 🎮 Demo Features
 
 | Feature | Details |
 |---|---|
