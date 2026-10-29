@@ -31,7 +31,7 @@
 
 ---
 
-## 🗂 Project Structure
+# 🗂 Project Structure
 
 ```
 minor project/
